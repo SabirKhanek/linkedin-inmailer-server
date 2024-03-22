@@ -1,0 +1,7 @@
+# created by virtualenv automatically
+include
+Lib
+Scripts
+__pycache__
+.env
+db.sqlite
