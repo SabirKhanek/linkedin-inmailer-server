@@ -151,8 +151,8 @@ class Client(object):
         if "LinkedIn: Log In or Sign Up" in soup.text:
             raise UnauthorizedException("Redirected to login page: invalid cookies")
         
-        if not self.metadata["clientPageInstanceId"]:
-            raise UnauthorizedException("couldn't fetch instance id. cookies are possible corrupt")
+        if "clientPageInstanceId" not in self.metadata.keys():
+            raise UnauthorizedException("couldn't fetch instance id. cookies are possibly corrupt")
 
         # Check if their is link to "https://linkedin.com/sales"
         if self.SALES_NAV_BASE_URL in soup.text:

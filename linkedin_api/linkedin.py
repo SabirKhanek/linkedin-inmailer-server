@@ -705,11 +705,14 @@ class Linkedin(object):
         """
         # NOTE this still works for now, but will probably eventually have to be converted to
         # https://www.linkedin.com/voyager/api/identity/profiles/ACoAAAKT9JQBsH7LwKaE9Myay9WcX8OVGuDq9Uw
+        
         res = self._fetch(f"/identity/profiles/{public_id or urn_id}/profileView")
-
-        data = res.json()
+        try:
+            data = res.json()
+        except Exception:
+            raise Exception(f"Unable to get profile. Server returned {res.status_code}")
         if data and "status" in data and data["status"] != 200:
-            self.logger.info("request failed: {}".format(data["message"]))
+            self.logger.info("request failed: {}".format(data.get("message") or "Bad Request"))
             return {}
 
         # massage [profile] data
