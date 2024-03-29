@@ -160,6 +160,10 @@ class Client(object):
             self.logger.debug("Sales subscription in account detected")
             sleep(random.randint(2, 5))
             self._fetch_sales_nav_metadata()
+        elif "urn:li:group:3926212" in soup.text:
+            self.metadata["premium"] = {"plan":"career"}
+            self.logger.debug("Career subscription detected")
+
 
     def _fetch_sales_nav_metadata(self):
         """

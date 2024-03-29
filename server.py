@@ -30,7 +30,7 @@ app.add_middleware(
 )
 
 app.add_middleware(SessionMiddleware, secret_key=settings.get("SECRET"))
-
+app.mount("/app", StaticFiles(directory="./public", html=True, check_dir=True))
 # @app.get("/{path:path}")
 # def serve_file_or_index(path: str,req: Request, call_next):
 #     file_path = f"public/{path}"

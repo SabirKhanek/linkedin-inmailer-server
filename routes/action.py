@@ -59,13 +59,7 @@ class InmailRequest(BaseModel):
 @actionRouter.post("/send_inmail")
 def send_inmail(body: InmailRequest, client: Linkedin=Depends(get_linked_in_client)):
     try:
-        profile_id = client.get_profile(body.public_id).get("profile_id")
-        if not profile_id:
-            raise HTTPException(400, f"couldn't fetcg profile id of https://linkedin.com/in/{body.public_id}")
-        sales_profile_id = client.get_sales_profile(profile_id).get("entityUrn")
-        if not sales_profile_id:
-            raise HTTPException(400, f"Couldn't fetch sales profile url")
-        inmailResp = client.send_sales_inmail(sales_profile_id, body.subject, body.body, body.public_id)
+        inmailResp = client.send_inmail(body.public_id, body.subject, body.body)
         return inmailResp
     except Exception as e:
         raise HTTPException(500, get_error_message(e, "Error sending inmail"))

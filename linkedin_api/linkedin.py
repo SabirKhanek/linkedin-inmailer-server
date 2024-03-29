@@ -9,6 +9,7 @@ import random
 import uuid
 from operator import itemgetter
 from time import sleep, time
+from fastapi import HTTPException
 import requests
 from urllib.parse import quote, urlencode
 
@@ -1552,10 +1553,10 @@ class Linkedin(object):
         return data
     
     def verify_sales_subscription(self):
-        if not (self.client.metadata["premium"] and self.client.metadata["premium"]["plan"]=="sales"):
+        if not (self.client.metadata.get("premium") and self.client.metadata.get("premium").get("plan")=="sales"):
             raise Exception("Sales Nav premium subscription is not available")
     
-    def get_sales_profile(self, profile_id, evade=default_evade):
+    def get_sales_profile(self, profile_id, evade=default_evade) -> dict:
         """
         get sales profile urn from profile id
         """
@@ -1578,18 +1579,20 @@ class Linkedin(object):
         
         return res.json()
     
-    def send_sales_inmail(self, sales_urn, subject="Inmail Subject", body="Inmail Body", public_id=None,evade=default_evade):
-        evade()
+    def send_sales_inmail(self, profile_id, subject="Inmail Subject", body="Inmail Body",evade=default_evade, public_id=None):
         self.logger.debug("Sending inmail request")
-        
-        self.verify_sales_subscription()
+        sales_urn_resp = self.get_sales_profile(profile_id)
+        sales_urn =  sales_urn_resp.get("entityUrn")
+
+        if not sales_urn:
+            raise HTTPException(400, f"Couldn't fetch sales profile url: {json.dumps(sales_urn_resp)}")
 
         url = f"{self.client.SALES_NAV_API_URL}/salesApiMessageActions?action=createMessage"
 
         headers={
             **self.client.session.headers, 
             "content-type": "application/json",
-            "x-li-track":self.client.liTrackSales, 
+            "x-li-track":self.client.liTrackSales,
         }
 
         if public_id:
@@ -1606,7 +1609,78 @@ class Linkedin(object):
         }
 
         req_body_str = json.dumps(req_body)
-
+        evade()
         res = requests.post(url=url, data=req_body_str, headers=headers, cookies=self.client.session.cookies)
 
         return res.json()
+
+    def send_career_inmail(self, profile_id, subject="Inmail Subject", body="Inmail Body",evade=default_evade, public_id=None):
+        self.logger.debug("sending career inmail")
+
+        url = f"{self.client.API_BASE_URL}/voyagerMessagingDashMessengerMessages?action=createMessage"
+        self_user = self.get_user_profile()
+        self_profile_id = self_user.get("miniProfile").get("entityUrn").replace(
+            "fs_miniProfile", "fsd_profile"
+        )
+
+        headers={
+            **self.client.session.headers, 
+            "content-type": "text/plain;charset=UTF-8",
+            "x-li-track":self.client.liTrackSales,
+        }
+
+        if public_id:
+           headers["referer"]=f"https://linkedin.com/in/{public_id}"
+
+        req_body = {"message":{
+            "body":{
+                "attributes":[],
+                "text":"Test Message"
+            },
+            "subject":subject,
+            "originToken":str(uuid.uuid4()),
+            "renderContentUnions":[]
+        },
+        "mailboxUrn":self_profile_id,
+        "trackingId":generate_trackingId_as_charString(),
+        "dedupeByClientGeneratedToken":False,
+        "hostRecipientUrns":[f"urn:li:fsd_profile:{profile_id}"],
+        "hostMessageCreateContent":{
+            "com.linkedin.voyager.dash.messaging.MessageCreateContent":{
+                "messageCreateContentUnion":{
+                    "premiumInMail":{}
+                    }
+                }
+            }
+        }
+        
+        
+
+        req_body_str = json.dumps(req_body)
+
+        evade()
+        res = requests.post(url=url, data=req_body_str, headers=headers, cookies=self.client.session.cookies)
+
+        return res.json()
+        
+
+            
+    
+    def send_inmail(self, public_id: str, subject="Inmail Subject", body="Inmail Body",evade=default_evade):
+        profile_id = self.get_profile(public_id).get("profile_id")
+        if not profile_id:
+            raise HTTPException(400, f"couldn't fetch profile id of https://linkedin.com/in/{public_id}")
+
+        premium_obj: dict = self.client.metadata.get("premium")
+        if(not premium_obj): 
+            raise HTTPException(400, "There is no premium subscription!")
+        
+        premium_plan = premium_obj.get("plan") 
+        inmail_funct=None
+
+        if premium_plan == "sales":
+            inmail_funct=self.send_sales_inmail
+        elif premium_plan == "career":
+            inmail_funct = self.send_career_inmail
+
+        return {"type":premium_plan, "response":inmail_funct(profile_id, subject, body, evade, public_id=public_id)}
