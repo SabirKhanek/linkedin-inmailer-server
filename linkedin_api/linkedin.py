@@ -1692,7 +1692,7 @@ class Linkedin(object):
         recruiter_urn_resp = self.get_recruiter_profile(profile_id)
         recruiter_urn =  recruiter_urn_resp.get("referenceUrn")
         contactInfo = recruiter_urn_resp.get("contactInfo") or {}
-        email = contactInfo.get("primaryEmail") or ""
+        email = contactInfo.get("primaryEmail") or None
 
         if not recruiter_urn:
             raise HTTPException(400, f"Couldn't fetch sales profile url: {json.dumps(recruiter_urn_resp)}")
@@ -1728,7 +1728,7 @@ class Linkedin(object):
                 ]
             },
             "queryId":"talentMultiMessagePosts.be0f985141a7cf89d4d410c4e5839e8f",
-            "includeWebMetadata":False
+            "includeWebMetadata":True
         }    
     
         req_body_str = json.dumps(req_body)
