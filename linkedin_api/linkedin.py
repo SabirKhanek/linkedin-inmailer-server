@@ -13,6 +13,8 @@ from fastapi import HTTPException
 import requests
 from urllib.parse import quote, urlencode
 
+import urllib3
+
 from linkedin_api.client import Client
 from linkedin_api.utils.helpers import (
     append_update_post_field_to_posts_list,
@@ -1662,9 +1664,78 @@ class Linkedin(object):
         res = requests.post(url=url, data=req_body_str, headers=headers, cookies=self.client.session.cookies)
 
         return res.json()
-        
 
-            
+
+    def get_recruiter_profile(self, profile_id: str, evade=default_evade) -> dict:
+        """
+        get recruiter profile urn from profile id
+        """
+        evade()
+        self.logger.debug("Sending request to fetch recruiter profile urn")
+        
+        decoration = quote(f'(entityUrn,contactInfo,referenceUrn,anonymized,unobfuscatedFirstName,unobfuscatedLastName,firstName,lastName,vectorProfilePicture)')
+        encodedUri = quote(f"urn:li:ts_linkedin_member_profile:({profile_id},1,urn:li:ts_hiring_project:0)")
+        res = requests.get(
+            url=f"{self.client.LINKEDIN_BASE_URL}/talent/api/talentLinkedInMemberProfiles/{encodedUri}?altkey=urn&decoration={decoration}", 
+            cookies=self.client.session.cookies, 
+            headers={
+                **self.client.session.headers, 
+                # "x-li-track":self.client.liTrackSales, 
+                "referer":f"{self.client.LINKEDIN_BASE_URL}/talent/profile/{profile_id}"
+            }
+        )
+        
+        return res.json()
+
+    def send_recruiter_inmail(self, profile_id, subject="Inmail Subject", body="Inmail Body",evade=default_evade, public_id=None):
+        self.logger.debug("Sending inmail request")
+        recruiter_urn_resp = self.get_recruiter_profile(profile_id)
+        recruiter_urn =  recruiter_urn_resp.get("referenceUrn")
+        contactInfo = recruiter_urn_resp.get("contactInfo") or {}
+        email = contactInfo.get("primaryEmail") or ""
+
+        if not recruiter_urn:
+            raise HTTPException(400, f"Couldn't fetch sales profile url: {json.dumps(recruiter_urn_resp)}")
+
+        url = f"{self.client.LINKEDIN_BASE_URL}/talent/api/graphql?action=execute&queryId=talentMultiMessagePosts.be0f985141a7cf89d4d410c4e5839e8f"
+
+        headers={
+            **self.client.session.headers, 
+            "content-type": "application/json",
+            "referer":f"{self.client.LINKEDIN_BASE_URL}/talent/profile/{profile_id}"
+
+            # "x-li-track":self.client.liTrackSales,
+        }
+        req_body={
+            "variables":{
+                "messagePostPayloads":[
+                    {
+                        "emailAddress":email,
+                        "followUpPosts":[],
+                        "ofccpTrackingId":None,
+                        "recipientProfileUrn":recruiter_urn,
+                        "primaryPost":{
+                            "attachments":[],
+                            "body":"Test body",
+                            "channel":"INMAIL",
+                            "enableCalenderShare":False,
+                            "subject":subject
+                        },
+                        "signature":public_id or "",
+                        "visibility":"PRIVATE",
+                        "globalSourcingType":"FLAGSHIP_PROFILE"
+                    }
+                ]
+            },
+            "queryId":"talentMultiMessagePosts.be0f985141a7cf89d4d410c4e5839e8f",
+            "includeWebMetadata":False
+        }    
+    
+        req_body_str = json.dumps(req_body)
+        evade()
+        res = requests.post(url=url, data=req_body_str, headers=headers, cookies=self.client.session.cookies)
+
+        return res.json()
     
     def send_inmail(self, public_id: str, subject="Inmail Subject", body="Inmail Body",evade=default_evade):
         profile_id = self.get_profile(public_id).get("profile_id")
@@ -1682,5 +1753,8 @@ class Linkedin(object):
             inmail_funct=self.send_sales_inmail
         elif premium_plan == "career":
             inmail_funct = self.send_career_inmail
+        elif premium_plan == "recruiter":
+            inmail_funct = self.send_recruiter_inmail
+
 
         return {"type":premium_plan, "response":inmail_funct(profile_id, subject, body, evade, public_id=public_id)}

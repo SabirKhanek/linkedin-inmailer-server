@@ -16,12 +16,13 @@ cookieStr = os.getenv("cookie")
 if not cookieStr:
     raise Exception("Cookie string needs to be configured")
 cookieObj = parse_cookie_string(cookieStr)
+# print(cookieObj)
 cookies = cookiejar_from_dict(
     cookieObj
 )
 
 liInstance = Linkedin("","", cookies=cookies, debug=True)
-print(liInstance.send_inmail("thesyedfakharulhassan"))
+print(liInstance.send_inmail("devsabir"))
 # print(liInstance.get_user_profile())
 
 # pid = liInstance.get_profile("araffay")["profile_id"]

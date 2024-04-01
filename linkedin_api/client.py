@@ -163,6 +163,9 @@ class Client(object):
         elif "urn:li:group:3926212" in soup.text:
             self.metadata["premium"] = {"plan":"career"}
             self.logger.debug("Career subscription detected")
+        elif "Recruiter Account" in soup.text:
+            self.metadata["premium"] = {"plan":"recruiter"}
+            self.logger.debug("Recruiter account detected")
 
 
     def _fetch_sales_nav_metadata(self):
