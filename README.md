@@ -1,5 +1,4 @@
 # Linkedin inmailer server
-
 This repository is an API wrapper around original [linkedin_api](https://github.com/tomquirk/linkedin-api) with some customized funtionalities for inmail. The original repository didn't have support for premium account capabilities. But it had good session management so it was a good repo to fork.
 Directory in this repository [linkedin_api](https://github.com/SabirKhanek/linkedin-inmailer-server/tree/main/linkedin_api) contains code from original repository + Customization to enable premium account features for now Inmails.
 
@@ -154,3 +153,44 @@ Technology stack:
 - **FastAPI**: For HTTP server
 - **SQLModel**: ORM for database operations (database is mainly used for user controls and storing cookies per user)
 - **ReactJS**: Frontend UI [Repository](https://github.com/SabirKhanek/linkedin-inmailer-ui)
+
+## How to setup locally
+### Prequisites
+- Python installed in your system
+### Steps
+1. Clone this repository
+```shell
+git clone https://github.com/sabirkhanek/linkedin-inmailer-server
+```
+2. Install ```virtualenv```:
+```bash
+pip install virtualenv
+```
+3. create virtualenv:
+```shell
+virtualenv linkedin-inmailer-server
+cd linkedin-inmailer-server
+```
+4. activate virtual environment:
+On linux:
+```shell
+source ./bin/activate
+```
+On windows:
+```cmd
+Scripts\activate
+```
+5. Install dependencies
+```shell
+pip install -r requirements.txt
+```
+6. Run the server
+```shell
+uvicorn server:app
+```
+The server will start listening on port 8000
+7. Open the app interface
+```
+http://localhost:8000/app
+```
+Static bundle for ui is served from app directory. It was added for convenience. You can check the code for frontend [here](https://github.com/sabirkhanek/linkedin-inmailer-ui). 

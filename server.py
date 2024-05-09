@@ -30,7 +30,15 @@ app.add_middleware(
 )
 
 app.add_middleware(SessionMiddleware, secret_key=settings.get("SECRET"))
-app.mount("/app", StaticFiles(directory="./public", html=True, check_dir=True))
+
+class SPAStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 404:
+            response = await super().get_response('.', scope)
+        return response
+
+app.mount('/app/', SPAStaticFiles(directory='public', html=True), name='app')
 # @app.get("/{path:path}")
 # def serve_file_or_index(path: str,req: Request, call_next):
 #     file_path = f"public/{path}"
